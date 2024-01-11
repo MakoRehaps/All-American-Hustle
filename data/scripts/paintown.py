@@ -1,3 +1,5 @@
+import pygame
+
 class Object:
     def __init__(self, object):
         self.object = object
@@ -156,3 +158,8 @@ def tick():
     checkEngine()
     for engine in engines:
         engine.tick()
+        
+def play_mp3(file_path):
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
