@@ -76,22 +76,82 @@ To run the game with the new RPG mechanics:
 
 3. The game should now start with the integrated RPG mechanics and quest system.
 
-## Testing the RPG Mechanics
+## Detailed Test Plan
 
-While playing the game, pay attention to the following new features:
+Please follow this test plan to thoroughly evaluate the new RPG mechanics and quest system. For each scenario, provide detailed feedback on your observations, including any issues or suggestions for improvement.
 
-1. Character progression (leveling up, gaining experience)
-2. Inventory management
-3. Quest system (accepting quests, tracking progress, completing objectives)
+### 1. Character Progression
+a) Create a new character and note the initial stats.
+b) Defeat several enemies and verify that experience is gained.
+c) Level up the character and confirm that:
+   - The level increases correctly
+   - Health and attack values increase
+   - Any new abilities or skills are unlocked (if applicable)
+d) Repeat the process for multiple level-ups to ensure consistent progression.
 
-## Providing Feedback
+### 2. Inventory Management
+a) Check the initial inventory state.
+b) Collect various items throughout the game.
+c) Verify that:
+   - Items are correctly added to the inventory
+   - Item quantities are accurately updated
+   - The inventory has a reasonable capacity limit (if applicable)
+d) Use or remove items from the inventory and confirm that quantities are updated correctly.
+e) Test any item sorting or categorization features (if implemented).
 
-After testing the game, please provide feedback on the following aspects:
+### 3. Quest System
+a) Locate and accept a new quest.
+b) Review the quest objectives and description.
+c) Progress through the quest by completing objectives.
+d) Verify that:
+   - Quest progress is accurately tracked
+   - Objectives update in real-time as you complete them
+   - The quest is marked as completed when all objectives are met
+e) Check for any quest rewards and confirm they are correctly awarded.
+f) Test multiple quests simultaneously to ensure they don't interfere with each other.
 
-1. How well do the RPG mechanics integrate with the existing beat 'em up gameplay?
-2. Is the character progression system balanced and engaging?
-3. Are the quests interesting and do they add depth to the game?
-4. Any bugs or issues encountered during gameplay?
-5. Suggestions for improvements or additional features
+### 4. Integration with Existing Gameplay
+a) Play through several levels of the game, focusing on how the RPG mechanics blend with the beat 'em up gameplay.
+b) Evaluate the balance between RPG elements and action gameplay.
+c) Test how character progression affects combat difficulty and player power.
 
-Please share your feedback with the development team to help improve and refine the RPG mechanics in All-American Hustle.
+### 5. Performance and Stability
+a) Play the game for an extended session (30+ minutes).
+b) Monitor for any performance issues, crashes, or bugs related to the new RPG mechanics.
+c) Test saving and loading game progress (if implemented) to ensure RPG data is preserved.
+
+## Providing Structured Feedback
+
+After completing the test plan, please provide detailed feedback on each of the following aspects:
+
+1. Character Progression:
+   - Is the leveling system balanced and rewarding?
+   - Do stat increases feel meaningful and impactful?
+   - Suggestions for improvement:
+
+2. Inventory System:
+   - Is inventory management intuitive and user-friendly?
+   - Are there any issues with item handling or quantities?
+   - Suggestions for improvement:
+
+3. Quest System:
+   - Are quests engaging and well-integrated into the gameplay?
+   - Is quest tracking clear and informative?
+   - Suggestions for additional quest types or features:
+
+4. Integration with Existing Gameplay:
+   - How well do the RPG mechanics complement the beat 'em up style?
+   - Does the game feel cohesive with the new features?
+   - Areas where integration could be improved:
+
+5. Overall Gameplay Experience:
+   - Has the addition of RPG mechanics enhanced the game? How?
+   - Any features you feel are missing or underdeveloped?
+   - General suggestions for improving the RPG aspects:
+
+6. Bugs and Issues:
+   - Detailed description of any bugs encountered
+   - Steps to reproduce the bugs (if possible)
+   - Severity of each bug (minor, moderate, severe)
+
+Please provide your feedback in a structured format, addressing each point above. Your insights will be invaluable in refining and improving the RPG mechanics in All-American Hustle. Thank you for your time and effort in testing the game!
