@@ -1,7 +1,12 @@
 import sys
-sys.path.append('/home/ubuntu/All-American-Hustle')
 import pygame
+sys.path.append('/home/ubuntu/All-American-Hustle')
 from rpg_mechanics.rpg_system import Character as RPGCharacter, Inventory, Quest
+
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("All-American Hustle")
+clock = pygame.time.Clock()
 
 print("Game script started")
 
@@ -157,17 +162,26 @@ class Engine:
         return self.player
 
     def tick(self):
-        print("Game loop started")
         if self.player:
+            # Simulate player movement (example)
+            self.player.setX(self.player.getX() + 1)
+            self.player.setZ(self.player.getZ() + 0.5)
+
             # Update quest progress (example)
             self.player.updateQuest("goblins_defeated")
 
             # Gain experience (example)
-            self.player.gainExperience(10)
+            self.player.gainExperience(5)
 
             # Update player's health based on RPG character's health
             rpg_stats = self.player.getRPGStats()
             self.player.setHealth(rpg_stats["health"])
+
+            # Print player status
+            print(f"Player position: ({self.player.getX()}, {self.player.getY()}, {self.player.getZ()})")
+            print(f"Player health: {self.player.getHealth()}")
+            print(f"Quest status: {self.player.getQuestStatus()}")
+            print(f"Player stats: {rpg_stats}")
 
 engines = []
 def register(engine):
@@ -201,7 +215,26 @@ def play_mp3(file_path):
     pygame.mixer.music.play()
 
 if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    pygame.display.set_caption("All-American Hustle")
+    clock = pygame.time.Clock()
+
     engine = Engine()
     engine.createWorld("world_name")  # Placeholder for actual world creation
-    while True:
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+
         engine.tick()
+        pygame.display.flip()
+        clock.tick(60)  # 60 FPS
+
+    pygame.quit()
+    sys.exit()
