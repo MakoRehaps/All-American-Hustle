@@ -1,0 +1,24 @@
+name: Validate Game Data
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: RPG and character self-tests
+        run: python tools/self_test.py
+      - name: Prepare level scripts
+        run: python tools/prepare_game.py
+      - name: Python syntax check
+        run: python -m py_compile rpg_mechanics/rpg_system.py data/scripts/paintown.py data/levels/paintown/rpg.py tools/import_animation.py tools/prepare_game.py tools/self_test.py
+      - name: CMake configure
+        run: cmake -S . -B build
+      - name: CMake prepare target
+        run: cmake --build build
