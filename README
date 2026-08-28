@@ -5,9 +5,11 @@ A modified Paintown beat-'em-up project built around custom characters, custom s
 
 Windows quick start
 -------------------
-1. Install Python 3 if it is not already available.
-2. Run `run_game.bat` from the repository root.
-3. The launcher validates the game files, enables the RPG script on every Paintown stage, then launches `All American Hustle.exe`.
+1. Run `run_game.bat` from the repository root.
+2. The launcher uses Windows PowerShell to validate the install and enable the RPG script on every Paintown stage.
+3. It then launches `All American Hustle.exe`.
+
+Python is NOT required just to play the Windows build. Python 3 is only needed for the development tools such as the AI animation importer and self-tests.
 
 Progression
 -----------
@@ -25,17 +27,15 @@ Put an ordered PNG sequence in a folder, then run for example:
 
 The importer renames/copies frames into the selected Paintown player action folder and updates or creates the corresponding `(anim ...)` block in the character definition. Existing attacks can still be hand-tuned afterward for exact hit boxes and offsets.
 
-Validation
-----------
-Run:
+Validation/development
+----------------------
+Optional developer checks:
 
 `python tools/self_test.py`
 
-and:
-
 `python tools/prepare_game.py`
 
-The repository also contains a GitHub Actions validation workflow.
+The repository also contains a GitHub Actions validation workflow. Windows players can use `tools/prepare_game.ps1` instead of the Python preparation utility.
 
 Engine note
 -----------
