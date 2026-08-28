@@ -1,59 +1,68 @@
+from __future__ import print_function
+
+import os
 import sys
-import pygame
-sys.path.append('/home/ubuntu/All-American-Hustle')
-from rpg_mechanics.rpg_system import Character as RPGCharacter, Inventory, Quest
 
-pygame.init()
-screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("All-American Hustle")
-clock = pygame.time.Clock()
+# Paintown embeds Python and imports this file as its support module. Do not create a
+# window, initialize pygame, or run a standalone loop here.
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
-print("Game script started")
+from rpg_mechanics.rpg_system import SaveManager
 
-class Object:
-    def __init__(self, object):
-        self.object = object
 
-    def getId(self):
-        import paintown_internal
-        return paintown_internal.getId(self.getObject())
+def _internal():
+    import paintown_internal
+    return paintown_internal
 
-    def getX(self):
-        import paintown_internal
-        return paintown_internal.getX(self.getObject())
 
-    def setX(self, value):
-        import paintown_internal
-        paintown_internal.setX(self.getObject(), value)
+def _safe_name(raw, fallback):
+    for attr in ("getName", "name"):
+        try:
+            value = getattr(raw, attr)
+            value = value() if callable(value) else value
+            if value:
+                return str(value)
+        except Exception:
+            pass
+    return fallback
 
-    def getY(self):
-        import paintown_internal
-        return paintown_internal.getY(self.getObject())
 
-    def setY(self, value):
-        import paintown_internal
-        paintown_internal.setY(self.getObject(), value)
-
-    def getZ(self):
-        import paintown_internal
-        return paintown_internal.getZ(self.getObject())
-
-    def setZ(self, value):
-        import paintown_internal
-        paintown_internal.setZ(self.getObject(), value)
+class Object(object):
+    def __init__(self, raw):
+        self.object = raw
 
     def getObject(self):
         return self.object
 
+    def getId(self):
+        return _internal().getId(self.object)
+
+    def getX(self):
+        return _internal().getX(self.object)
+
+    def setX(self, value):
+        _internal().setX(self.object, value)
+
+    def getY(self):
+        return _internal().getY(self.object)
+
+    def setY(self, value):
+        _internal().setY(self.object, value)
+
+    def getZ(self):
+        return _internal().getZ(self.object)
+
+    def setZ(self, value):
+        _internal().setZ(self.object, value)
+
     def getHealth(self):
-        import paintown_internal
-        return paintown_internal.getHealth(self.getObject())
+        return _internal().getHealth(self.object)
 
     def setHealth(self, health):
-        import paintown_internal
-        return paintown_internal.setHealth(self.getObject(), health)
+        return _internal().setHealth(self.object, int(health))
 
-    # Callbacks
     def didCollide(self, him):
         pass
 
@@ -63,12 +72,12 @@ class Object:
     def tick(self):
         pass
 
+
 class Character(Object):
-    def __init__(self, character):
-        Object.__init__(self, character)
-        self.rpg_character = RPGCharacter(character.getName())
-        self.inventory = Inventory()
-        print(f"Character {character.getName()} created")
+    def __init__(self, raw, engine=None):
+        Object.__init__(self, raw)
+        self.engine = engine
+        self.name = _safe_name(raw, "Enemy")
 
     def isPlayer(self):
         return False
@@ -76,165 +85,210 @@ class Character(Object):
     def didAttack(self, him):
         pass
 
-    def gainExperience(self, amount):
-        print(f"{self.rpg_character.name} gained {amount} experience")
-        old_level = self.rpg_character.level
-        self.rpg_character.gain_experience(amount)
-        if self.rpg_character.level > old_level:
-            print(f"{self.rpg_character.name} leveled up to level {self.rpg_character.level}!")
-
-    def getInventory(self):
-        return self.inventory
-
-    def getRPGStats(self):
-        return self.rpg_character.get_stats()
 
 class Player(Character):
-    def __init__(self, player):
-        Character.__init__(self, player)
-        self.quest = Quest("Defeat Goblins", "Defeat 5 goblins in the forest", {"goblins_defeated": 5})
-        print(f"Player {player.getName()} created")
+    def __init__(self, raw, engine=None):
+        Character.__init__(self, raw, engine)
+        self.name = _safe_name(raw, "Fighter")
+        self._last_engine_health = None
 
     def isPlayer(self):
         return True
 
     def getScore(self):
-        import paintown_internal
-        return paintown_internal.getScore(self.getObject())
+        return _internal().getScore(self.object)
 
-    def increaseScore(self, much):
-        self.setScore(self.getScore() + much)
+    def increaseScore(self, amount):
+        self.setScore(self.getScore() + int(amount))
 
     def setScore(self, score):
-        import paintown_internal
-        paintown_internal.setScore(self.getObject(), score)
+        _internal().setScore(self.object, int(score))
 
-    def updateQuest(self, objective, amount=1):
-        old_status = self.quest.completed
-        self.quest.update_progress(objective, amount)
-        print(f"Quest progress updated: {objective} increased by {amount}")
-        if self.quest.completed and not old_status:
-            print(f"Quest '{self.quest.name}' completed!")
+    def didAttack(self, him):
+        if self.engine is None or him is None:
+            return
+        self.engine.on_player_attack(self, him)
 
-    def getQuestStatus(self):
-        return self.quest.get_status()
+    def takeDamage(self, him, damage):
+        if self.engine is not None:
+            self.engine.on_player_damage(self, damage)
 
-class Engine:
+
+class Engine(object):
+    """Bridge between Paintown callbacks and persistent All-American Hustle state."""
+
     def __init__(self):
         self.world = None
-        self.player = None
+        self.players = {}
+        self.characters = {}
+        self.defeated_ids = set()
+        self.save_manager = SaveManager()
+        self.state = None
+        self._ticks = 0
+        self._dirty = False
 
     def createWorld(self, world):
         self.world = world
 
     def levelLength(self):
-        import paintown_internal
-        assert(self.world != None)
-        return paintown_internal.levelLength(self.world)
+        if self.world is None:
+            return 0
+        return _internal().levelLength(self.world)
 
-    def findObject(self, id):
-        import paintown_internal
-        return paintown_internal.findObject(self.world, id)
+    def findObject(self, object_id):
+        if self.world is None:
+            return None
+        return _internal().findObject(self.world, object_id)
 
     def getObjects(self):
-        import paintown_internal
-        return paintown_internal.getObjects(self.world)
+        if self.world is None:
+            return []
+        return _internal().getObjects(self.world)
 
     def getEnemies(self):
-        return filter(lambda n: not n.isPlayer(), self.getObjects())
+        return [obj for obj in self.getObjects() if not obj.isPlayer()]
 
     def getPlayers(self):
-        return filter(lambda n: n.isPlayer(), self.getObjects())
+        return [obj for obj in self.getObjects() if obj.isPlayer()]
 
-    def addCharacter(self, path, name, map, health, x, z):
-        import paintown_internal
-        return paintown_internal.addCharacter(self.world, path, name, map, health, x, z)
+    def addCharacter(self, path, name, map_number, health, x, z):
+        return _internal().addCharacter(self.world, path, name, map_number, health, x, z)
 
     def cacheCharacter(self, path):
-        import paintown_internal
-        paintown_internal.cacheCharacter(path)
+        _internal().cacheCharacter(path)
 
-    def createCharacter(self, character):
-        return Character(character)
+    def createCharacter(self, raw):
+        wrapper = Character(raw, self)
+        try:
+            self.characters[wrapper.getId()] = wrapper
+        except Exception:
+            pass
+        return wrapper
 
-    def createPlayer(self, player):
-        self.player = Player(player)
-        return self.player
+    def createPlayer(self, raw):
+        wrapper = Player(raw, self)
+        try:
+            self.players[wrapper.getId()] = wrapper
+        except Exception:
+            self.players[id(raw)] = wrapper
+
+        if self.state is None:
+            self.state = self.save_manager.load(wrapper.name)
+        self._apply_persistent_health(wrapper)
+        return wrapper
+
+    def _apply_persistent_health(self, player):
+        if self.state is None:
+            return
+        maximum = self.state.character.max_health()
+        # Paintown character definitions remain the collision/combat source of truth;
+        # progression supplies a larger persistent health pool without moving actors.
+        try:
+            engine_health = player.getHealth()
+            if engine_health > 0:
+                player.setHealth(min(maximum, max(engine_health, self.state.character.health)))
+                self.state.character.health = player.getHealth()
+        except Exception:
+            pass
+
+    def on_player_attack(self, player, target):
+        if self.state is None:
+            return
+        self.state.event("attack_landed", 1)
+        self._dirty = True
+        try:
+            target_id = target.getId()
+            target_health = target.getHealth()
+        except Exception:
+            return
+
+        if target_health <= 0 and target_id not in self.defeated_ids:
+            self.defeated_ids.add(target_id)
+            self.state.event("enemy_defeated", 1)
+            # KO reward scales gently with the player's level.
+            self.state.character.gain_experience(20 + self.state.character.level * 2)
+            self.state.character.currency += 5
+            try:
+                player.increaseScore(100)
+            except Exception:
+                pass
+            self._dirty = True
+
+    def on_player_damage(self, player, damage):
+        if self.state is None:
+            return
+        try:
+            current = player.getHealth()
+        except Exception:
+            current = self.state.character.health - int(damage)
+        self.state.character.health = max(0, int(current))
+        self._dirty = True
+
+    def stage_completed(self):
+        if self.state is None:
+            return
+        self.state.event("stage_survived", 1)
+        self.state.stage += 1
+        self.state.character.heal(max(15, self.state.character.max_health() // 4))
+        self._dirty = True
+        self.save()
+
+    def save(self):
+        if self.state is not None and self.save_manager.save(self.state):
+            self._dirty = False
+            return True
+        return False
 
     def tick(self):
-        if self.player:
-            # Simulate player movement (example)
-            self.player.setX(self.player.getX() + 1)
-            self.player.setZ(self.player.getZ() + 0.5)
+        self._ticks += 1
+        if self.state is None:
+            return
 
-            # Update quest progress (example)
-            self.player.updateQuest("goblins_defeated")
+        # Mirror real engine health into the persistent record, but never move the
+        # player or fabricate quest progress. The previous script did both each tick.
+        for player in list(self.players.values()):
+            try:
+                health = int(player.getHealth())
+            except Exception:
+                continue
+            if health >= 0 and health != self.state.character.health:
+                self.state.character.health = min(health, self.state.character.max_health())
+                self._dirty = True
 
-            # Gain experience (example)
-            self.player.gainExperience(5)
+        # Autosave about every 10 seconds at a typical 60-Hz game tick.
+        if self._dirty and self._ticks % 600 == 0:
+            self.save()
 
-            # Update player's health based on RPG character's health
-            rpg_stats = self.player.getRPGStats()
-            self.player.setHealth(rpg_stats["health"])
-
-            # Print player status
-            print(f"Player position: ({self.player.getX()}, {self.player.getY()}, {self.player.getZ()})")
-            print(f"Player health: {self.player.getHealth()}")
-            print(f"Quest status: {self.player.getQuestStatus()}")
-            print(f"Player stats: {rpg_stats}")
 
 engines = []
+
+
 def register(engine):
     engines.append(engine)
 
+
 def checkEngine():
-    if len(engines) == 0:
-        raise Exception("No engines were registered!")
+    if not engines:
+        raise Exception("No Paintown script engine was registered")
+
 
 def createCharacter(character):
     checkEngine()
     return engines[0].createCharacter(character)
 
+
 def createPlayer(player):
     checkEngine()
     return engines[0].createPlayer(player)
+
 
 def createWorld(world):
     checkEngine()
     for engine in engines:
         engine.createWorld(world)
 
+
 def tick():
     checkEngine()
     for engine in engines:
         engine.tick()
-
-def play_mp3(file_path):
-    pygame.mixer.init()
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.play()
-
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((800, 600))
-    pygame.display.set_caption("All-American Hustle")
-    clock = pygame.time.Clock()
-
-    engine = Engine()
-    engine.createWorld("world_name")  # Placeholder for actual world creation
-
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-
-        engine.tick()
-        pygame.display.flip()
-        clock.tick(60)  # 60 FPS
-
-    pygame.quit()
-    sys.exit()

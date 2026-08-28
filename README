@@ -1,1 +1,42 @@
-Hey bros this is a modified alpha 1.0 of All American Hustle using pain town enjoy
+All-American Hustle
+===================
+
+A modified Paintown beat-'em-up project built around custom characters, custom stages, persistent RPG progression, and an AI/rendered animation workflow.
+
+Windows quick start
+-------------------
+1. Install Python 3 if it is not already available.
+2. Run `run_game.bat` from the repository root.
+3. The launcher validates the game files, enables the RPG script on every Paintown stage, then launches `All American Hustle.exe`.
+
+Progression
+-----------
+Persistent state is saved outside the game directory so installs remain portable:
+- Windows: `%APPDATA%\\AllAmericanHustle\\save.json`
+- Other systems: `~/.all_american_hustle/save.json`
+
+The RPG layer tracks level, XP, health, attack/defense scaling, currency, inventory, quests, and rewards.
+
+AI/rendered animation import
+----------------------------
+Put an ordered PNG sequence in a folder, then run for example:
+
+`python tools/import_animation.py JohnDutch attack1 C:\\frames\\attack1 --key key_attack1 --range 60 --damage 5`
+
+The importer renames/copies frames into the selected Paintown player action folder and updates or creates the corresponding `(anim ...)` block in the character definition. Existing attacks can still be hand-tuned afterward for exact hit boxes and offsets.
+
+Validation
+----------
+Run:
+
+`python tools/self_test.py`
+
+and:
+
+`python tools/prepare_game.py`
+
+The repository also contains a GitHub Actions validation workflow.
+
+Engine note
+-----------
+This repository contains a prebuilt Paintown-based Windows runtime and game data. The root CMake project prepares/packages that runtime; it does not pretend to compile nonexistent local Paintown C++ sources.
