@@ -1,157 +1,111 @@
-# Manual Integration Guide for RPG Mechanics in All-American Hustle
+# All-American Hustle – Working Build Guide
 
-This guide provides step-by-step instructions on how to manually apply the RPG mechanics and quest system changes to your local copy of the All-American Hustle game.
+## Play on Windows
 
-## Prerequisites
+Use `run_game.bat` in the repository root. The launcher performs the required preparation step and then starts the existing Paintown-based executable.
 
-- Git installed on your local machine
-- Python 3.x installed
-- Pygame library installed (`pip install pygame`)
+The preparation step:
 
-## Steps to Apply Changes
+- checks that the EXE, required DLLs, Paintown script bridge, RPG module, and shared level RPG script exist;
+- adds `(script python "levels/paintown/rpg.py")` to every Paintown stage exactly once;
+- stops instead of launching if the install is incomplete.
 
-1. Clone the repository (if you haven't already):
-   ```
-   git clone https://github.com/MakoRehaps/All-American-Hustle.git
-   cd All-American-Hustle
-   ```
+You can run the preparation step manually with:
 
-2. Create a new branch for the RPG mechanics:
-   ```
-   git checkout -b rpg-quest-system
-   ```
+```text
+python tools/prepare_game.py
+```
 
-3. Create a new directory for RPG mechanics:
-   ```
-   mkdir rpg_mechanics
-   ```
+## RPG System
 
-4. Create a new file `rpg_mechanics/rpg_system.py` with the following content:
-   ```python
-   # Copy the content of the rpg_system.py file here
-   ```
+`rpg_mechanics/rpg_system.py` now provides the persistent game-side systems:
 
-5. Update the `data/scripts/paintown.py` file:
-   - Open the file in your preferred text editor
-   - Replace the existing content with the updated version that includes RPG mechanics
-   - Make sure to import the necessary modules and classes from `rpg_system.py`
+- player level and XP, up to level 50;
+- health, attack, and defense scaling;
+- skill points and perks;
+- currency;
+- inventory with capacity and quantities;
+- quest objectives, completion, and rewards;
+- persistent save/load using JSON;
+- automatic quest reward claiming;
+- autosave through the Paintown script bridge.
 
-6. Create a new `CMakeLists.txt` file in the root directory with the following content:
-   ```cmake
-   cmake_minimum_required(VERSION 3.0)
-   project(AllAmericanHustle)
+On Windows the save file is stored at:
 
-   # Specify the C++ standard
-   set(CMAKE_CXX_STANDARD 11)
-   set(CMAKE_CXX_STANDARD_REQUIRED True)
+```text
+%APPDATA%\AllAmericanHustle\save.json
+```
 
-   # Add the source files
-   file(GLOB SOURCES "src/*.cpp")
+This avoids save failures when the game directory is read-only.
 
-   # Add the executable
-   add_executable(AllAmericanHustle ${SOURCES})
+## Paintown Integration
 
-   # TODO: Add any necessary libraries or dependencies
-   ```
+`data/scripts/paintown.py` is an embedded-engine bridge, not a standalone Pygame application. It must not open its own window or fake player actions.
 
-7. Commit the changes:
-   ```
-   git add rpg_mechanics/ data/scripts/paintown.py CMakeLists.txt
-   git commit -m "Add RPG mechanics and quest system"
-   ```
+Each stage loads `data/levels/paintown/rpg.py`, which registers the All-American Hustle engine with Paintown. The bridge records real combat callbacks, mirrors player health into persistent state, awards progression, and saves periodically.
 
-## Running the Game
+Paintown upstream documents this level-script registration model in `scripting.txt`.
 
-To run the game with the new RPG mechanics:
+## Import AI / Rendered Animation Frames
 
-1. Navigate to the `data/scripts` directory:
-   ```
-   cd data/scripts
-   ```
+The animation importer accepts a folder containing ordered PNG frames and installs it into an existing fighter.
 
-2. Run the `paintown.py` script:
-   ```
-   python paintown.py
-   ```
+Example:
 
-3. The game should now start with the integrated RPG mechanics and quest system.
+```text
+python tools/import_animation.py JohnDutch walk C:\frames\walk --delay 6
+```
 
-## Detailed Test Plan
+Attack example:
 
-Please follow this test plan to thoroughly evaluate the new RPG mechanics and quest system. For each scenario, provide detailed feedback on your observations, including any issues or suggestions for improvement.
+```text
+python tools/import_animation.py JohnDutch attack1 C:\frames\attack1 --delay 4 --key key_attack1 --range 60 --damage 5 --attack-frame 4
+```
 
-### 1. Character Progression
-a) Create a new character and note the initial stats.
-b) Defeat several enemies and verify that experience is gained.
-c) Level up the character and confirm that:
-   - The level increases correctly
-   - Health and attack values increase
-   - Any new abilities or skills are unlocked (if applicable)
-d) Repeat the process for multiple level-ups to ensure consistent progression.
+The importer will:
 
-### 2. Inventory Management
-a) Check the initial inventory state.
-b) Collect various items throughout the game.
-c) Verify that:
-   - Items are correctly added to the inventory
-   - Item quantities are accurately updated
-   - The inventory has a reasonable capacity limit (if applicable)
-d) Use or remove items from the inventory and confirm that quantities are updated correctly.
-e) Test any item sorting or categorization features (if implemented).
+1. find the character under `data/players/<character>`;
+2. sort the source PNG sequence naturally;
+3. copy it into the action directory as `01.png`, `02.png`, etc.;
+4. find the matching `(anim ...)` block in the Paintown character definition;
+5. replace that block, or append a new one if the action does not already exist;
+6. optionally create a basic attack box that can then be hand-tuned.
 
-### 3. Quest System
-a) Locate and accept a new quest.
-b) Review the quest objectives and description.
-c) Progress through the quest by completing objectives.
-d) Verify that:
-   - Quest progress is accurately tracked
-   - Objectives update in real-time as you complete them
-   - The quest is marked as completed when all objectives are met
-e) Check for any quest rewards and confirm they are correctly awarded.
-f) Test multiple quests simultaneously to ensure they don't interfere with each other.
+This lets AI-generated or rotoscoped frame sequences become normal Paintown actions without manually renaming every image or rewriting the animation block.
 
-### 4. Integration with Existing Gameplay
-a) Play through several levels of the game, focusing on how the RPG mechanics blend with the beat 'em up gameplay.
-b) Evaluate the balance between RPG elements and action gameplay.
-c) Test how character progression affects combat difficulty and player power.
+## Validation
 
-### 5. Performance and Stability
-a) Play the game for an extended session (30+ minutes).
-b) Monitor for any performance issues, crashes, or bugs related to the new RPG mechanics.
-c) Test saving and loading game progress (if implemented) to ensure RPG data is preserved.
+Run:
 
-## Providing Structured Feedback
+```text
+python tools/self_test.py
+```
 
-After completing the test plan, please provide detailed feedback on each of the following aspects:
+The tests verify RPG save/load, progression, inventory persistence, character-definition parenthesis integrity, and known JohnDutch animation blocks.
 
-1. Character Progression:
-   - Is the leveling system balanced and rewarding?
-   - Do stat increases feel meaningful and impactful?
-   - Suggestions for improvement:
+GitHub Actions also runs:
 
-2. Inventory System:
-   - Is inventory management intuitive and user-friendly?
-   - Are there any issues with item handling or quantities?
-   - Suggestions for improvement:
+- `tools/self_test.py`;
+- `tools/prepare_game.py`;
+- Python syntax compilation;
+- CMake configure;
+- CMake preparation target.
 
-3. Quest System:
-   - Are quests engaging and well-integrated into the gameplay?
-   - Is quest tracking clear and informative?
-   - Suggestions for additional quest types or features:
+## CMake
 
-4. Integration with Existing Gameplay:
-   - How well do the RPG mechanics complement the beat 'em up style?
-   - Does the game feel cohesive with the new features?
-   - Areas where integration could be improved:
+The repository contains the prebuilt Windows game runtime. There is no local `src/*.cpp` engine tree, so CMake no longer tries to compile an imaginary executable target.
 
-5. Overall Gameplay Experience:
-   - Has the addition of RPG mechanics enhanced the game? How?
-   - Any features you feel are missing or underdeveloped?
-   - General suggestions for improving the RPG aspects:
+Instead it validates/prepares the real game and can package the EXE, DLLs, data, RPG module, tools, and launcher.
 
-6. Bugs and Issues:
-   - Detailed description of any bugs encountered
-   - Steps to reproduce the bugs (if possible)
-   - Severity of each bug (minor, moderate, severe)
+Typical validation build:
 
-Please provide your feedback in a structured format, addressing each point above. Your insights will be invaluable in refining and improving the RPG mechanics in All-American Hustle. Thank you for your time and effort in testing the game!
+```text
+cmake -S . -B build
+cmake --build build
+```
+
+## Character Data
+
+Current player folders include custom fighters such as `ArnoldBacks`, `JohnDutch`, and `StevenStegals`, along with other existing Paintown player data. Their normal Paintown text definitions remain the source of truth for animation offsets, collision boxes, attack boxes, damage, sounds, and combo sequences.
+
+For exact combat feel, use the animation importer for the bulk frame conversion and then tune attack boxes/offsets in the resulting character definition.
